@@ -17,7 +17,7 @@ type Notification struct {
 	Hints      map[string]string
 }
 
-// UrgencyLevel represents the urgency level of a notification.
+// UrgencyLevel represents the urgency level of a notification to be used in the call.
 type UrgencyLevel string
 
 // Urgency levels.
