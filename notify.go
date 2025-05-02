@@ -23,7 +23,7 @@ type Notification struct {
 	Icon          string
 	AppName       string
 	Category      NotificationCategory
-	hints         map[string]string // Lowercase 'hints' -  private
+	Hints         map[string]string // Lowercase 'hints' -  private
 }
 
 // UrgencyLevel represents the urgency level of a notification.
@@ -70,7 +70,7 @@ const (
 func NewNotification() *Notification {
 	return &Notification{
 		Urgency: UrgencyNormal,
-		hints:   make(map[string]string), // Initialize the map here
+		Hints:   make(map[string]string), // Initialize the map here
 	}
 }
 
@@ -118,13 +118,13 @@ func (n *Notification) SetCategory(category NotificationCategory) *Notification 
 
 // AddHint sets a hint.  This is improved.
 func (n *Notification) AddHint(key NotificationHints, value string) *Notification {
-	n.hints[string(key)] = value
+	n.Hints[string(key)] = value
 	return n
 }
 
 // AddCustomHint sets a custom hint.
 func (n *Notification) AddCustomHint(key, value string) *Notification {
-	n.hints[key] = value
+	n.Hints[key] = value
 	return n
 }
 
@@ -237,7 +237,7 @@ func (n *Notification) Send() error {
 		args = append(args, "--desktop-entry="+n.DesktopEntry)
 	}
 
-	for key, value := range n.hints {
+	for key, value := range n.Hints {
 		arg := fmt.Sprintf("--hint=%s", key) // Start with the key
 		if strings.ToLower(key) == "resident" {
 			arg = fmt.Sprintf("--hint=string:%s", key)
