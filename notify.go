@@ -7,14 +7,23 @@ import (
 
 // Notification represents a notification object.
 type Notification struct {
-	Summary    string
-	Body       string
-	Urgency    UrgencyLevel
-	ExpireTime int
-	Icon       string
-	AppName    string
-	Category   NotificationCategory
-	Hints      map[string]string
+	ReplaceID     int
+	SoundName     string
+	SoundFile     string
+	SuppressSound bool
+	Resident      bool
+	Transient     bool
+	ImagePath     string
+	ActionIcons   bool
+	DesktopEntry  string
+	Summary       string
+	Body          string
+	Urgency       UrgencyLevel
+	ExpireTime    int
+	Icon          string
+	AppName       string
+	Category      NotificationCategory
+	Hints         map[string]string
 }
 
 // UrgencyLevel represents the urgency level of a notification to be used in the call.
@@ -88,7 +97,7 @@ func (n *Notification) SetExpireTime(expireTime int) *Notification {
 	return n
 }
 
-// SetIcon sets the icon of the notification.
+// SetIcon sets the icon of the notification (use absolute path).
 func (n *Notification) SetIcon(icon string) *Notification {
 	n.Icon = icon
 	return n
@@ -123,6 +132,58 @@ func (n *Notification) AddCustomHint(key, value string) *Notification {
 	n.Hints[key] = value
 	return n
 }
+func (n *Notification) SetReplaceID(id int) *Notification {
+	n.ReplaceID = id
+	return n
+}
+
+// SetSoundName sets the sound name of the notification.
+func (n *Notification) SetSoundName(name string) *Notification {
+	n.SoundName = name
+	return n
+}
+
+// SetSoundFile sets the sound file of the notification.
+func (n *Notification) SetSoundFile(file string) *Notification {
+	n.SoundFile = file
+	return n
+}
+
+// SetSuppressSound sets if sound is suppressed
+func (n *Notification) SetSuppressSound(suppress bool) *Notification {
+	n.SuppressSound = suppress
+	return n
+}
+
+// SetResident sets if the notification is resident
+func (n *Notification) SetResident(resident bool) *Notification {
+	n.Resident = resident
+	return n
+}
+
+// SetTransient sets if the notification is transient
+func (n *Notification) SetTransient(transient bool) *Notification {
+	n.Transient = transient
+	return n
+}
+
+// SetImagePath sets the image path of the notification.
+func (n *Notification) SetImagePath(path string) *Notification {
+	n.ImagePath = path
+	return n
+}
+
+// SetActionIcons sets if action icons are enabled.
+func (n *Notification) SetActionIcons(actionIcons bool) *Notification {
+	n.ActionIcons = actionIcons
+	return n
+}
+
+// SetDesktopEntry sets the desktop entry of the notification.
+func (n *Notification) SetDesktopEntry(entry string) *Notification {
+	n.DesktopEntry = entry
+	return n
+}
 
 // Send sends the notification using notify-send.
 func (n *Notification) Send() error {
@@ -134,6 +195,40 @@ func (n *Notification) Send() error {
 
 	if n.ExpireTime > 0 {
 		args = append(args, "--expire-time="+strconv.Itoa(n.ExpireTime))
+	}
+
+	if n.ReplaceID != 0 {
+		args = append(args, "--replace-id="+strconv.Itoa(n.ReplaceID))
+	}
+
+	if n.SoundName != "" {
+		args = append(args, "--sound="+n.SoundName)
+	} else if n.SoundFile != "" {
+		args = append(args, "--sound-file="+n.SoundFile)
+	}
+
+	if n.SuppressSound {
+		args = append(args, "--suppress-sound")
+	}
+
+	if n.Resident {
+		args = append(args, "--resident")
+	}
+
+	if n.Transient {
+		args = append(args, "--transient")
+	}
+
+	if n.ImagePath != "" {
+		args = append(args, "--image-path="+n.ImagePath)
+	}
+
+	if n.ActionIcons {
+		args = append(args, "--action-icons")
+	}
+
+	if n.DesktopEntry != "" {
+		args = append(args, "--desktop-entry="+n.DesktopEntry)
 	}
 
 	if n.Icon != "" {
