@@ -1,8 +1,10 @@
 package notify_send_wrapper
 
 import (
+	"fmt"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 // Notification represents a notification object.
@@ -11,8 +13,6 @@ type Notification struct {
 	SoundName     string
 	SoundFile     string
 	SuppressSound bool
-	Resident      bool
-	Transient     bool
 	ImagePath     string
 	ActionIcons   bool
 	DesktopEntry  string
@@ -23,10 +23,10 @@ type Notification struct {
 	Icon          string
 	AppName       string
 	Category      NotificationCategory
-	Hints         map[string]string
+	hints         map[string]string // Lowercase 'hints' -  private
 }
 
-// UrgencyLevel represents the urgency level of a notification to be used in the call.
+// UrgencyLevel represents the urgency level of a notification.
 type UrgencyLevel string
 
 // Urgency levels.
@@ -39,7 +39,7 @@ const (
 // NotificationCategory represents a notification category.
 type NotificationCategory string
 
-// Predefined notification categories.
+// Predefined notification categories.  Use iota for easier definition.
 const (
 	CategoryDevice    NotificationCategory = "device"
 	CategoryEmail     NotificationCategory = "email"
@@ -50,7 +50,7 @@ const (
 	CategoryTransport NotificationCategory = "transport"
 )
 
-// NotificationHints represent a list of hints
+// NotificationHints represents the possible hint names.  Use iota.
 type NotificationHints string
 
 const (
@@ -70,6 +70,7 @@ const (
 func NewNotification() *Notification {
 	return &Notification{
 		Urgency: UrgencyNormal,
+		hints:   make(map[string]string), // Initialize the map here
 	}
 }
 
@@ -115,23 +116,18 @@ func (n *Notification) SetCategory(category NotificationCategory) *Notification 
 	return n
 }
 
-// AddHint sets a hint.
+// AddHint sets a hint.  This is improved.
 func (n *Notification) AddHint(key NotificationHints, value string) *Notification {
-	if n.Hints == nil {
-		n.Hints = make(map[string]string)
-	}
-	n.Hints[string(key)] = value
+	n.hints[string(key)] = value
 	return n
 }
 
 // AddCustomHint sets a custom hint.
 func (n *Notification) AddCustomHint(key, value string) *Notification {
-	if n.Hints == nil {
-		n.Hints = make(map[string]string)
-	}
-	n.Hints[key] = value
+	n.hints[key] = value
 	return n
 }
+
 func (n *Notification) SetReplaceID(id int) *Notification {
 	n.ReplaceID = id
 	return n
@@ -155,15 +151,15 @@ func (n *Notification) SetSuppressSound(suppress bool) *Notification {
 	return n
 }
 
-// SetResident sets if the notification is resident
+// SetResident sets if the notification is resident.  This is now redundant.
 func (n *Notification) SetResident(resident bool) *Notification {
-	n.Resident = resident
+	n.AddHint(HintResident, strconv.FormatBool(resident))
 	return n
 }
 
 // SetTransient sets if the notification is transient
 func (n *Notification) SetTransient(transient bool) *Notification {
-	n.Transient = transient
+	n.AddHint(HintTransient, strconv.FormatBool(transient))
 	return n
 }
 
@@ -187,7 +183,21 @@ func (n *Notification) SetDesktopEntry(entry string) *Notification {
 
 // Send sends the notification using notify-send.
 func (n *Notification) Send() error {
-	args := []string{n.Summary, n.Body}
+	args := []string{}
+
+	if n.AppName != "" {
+		args = append(args, "--app-name="+n.AppName)
+	}
+	if n.ReplaceID != 0 {
+		args = append(args, "--replace-id="+strconv.Itoa(n.ReplaceID))
+	}
+
+	if n.Summary != "" { // Summary is required, so add it first.
+		args = append(args, n.Summary)
+	}
+	if n.Body != "" {
+		args = append(args, n.Body)
+	}
 
 	if n.Urgency != "" {
 		args = append(args, "--urgency="+string(n.Urgency))
@@ -197,8 +207,12 @@ func (n *Notification) Send() error {
 		args = append(args, "--expire-time="+strconv.Itoa(n.ExpireTime))
 	}
 
-	if n.ReplaceID != 0 {
-		args = append(args, "--replace-id="+strconv.Itoa(n.ReplaceID))
+	if n.Icon != "" {
+		args = append(args, "--icon="+n.Icon)
+	}
+
+	if n.Category != "" {
+		args = append(args, "--category="+string(n.Category))
 	}
 
 	if n.SoundName != "" {
@@ -209,14 +223,6 @@ func (n *Notification) Send() error {
 
 	if n.SuppressSound {
 		args = append(args, "--suppress-sound")
-	}
-
-	if n.Resident {
-		args = append(args, "--resident")
-	}
-
-	if n.Transient {
-		args = append(args, "--transient")
 	}
 
 	if n.ImagePath != "" {
@@ -231,20 +237,12 @@ func (n *Notification) Send() error {
 		args = append(args, "--desktop-entry="+n.DesktopEntry)
 	}
 
-	if n.Icon != "" {
-		args = append(args, "--icon="+n.Icon)
-	}
-
-	if n.AppName != "" {
-		args = append(args, "--app-name="+n.AppName)
-	}
-
-	if n.Category != "" {
-		args = append(args, "--category="+string(n.Category))
-	}
-
-	for key, value := range n.Hints {
-		args = append(args, "--hint="+key+"="+value)
+	for key, value := range n.hints {
+		arg := fmt.Sprintf("--hint=%s", key) // Start with the key
+		if strings.ToLower(key) == "resident" {
+			arg = fmt.Sprintf("--hint=string:%s", key)
+		}
+		args = append(args, arg+":"+value)
 	}
 
 	cmd := exec.Command("notify-send", args...)
